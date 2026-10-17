@@ -5,6 +5,7 @@ module Prettify
     , text
     , double
     , line
+    , nest
     , (<>)
     , hcat
     , fsep
@@ -28,6 +29,7 @@ data Doc
     | Line
     | Concat Doc Doc
     | Union Doc Doc
+    | Nest Int Doc
     deriving (Show, Eq)
 
 empty :: Doc
@@ -45,6 +47,9 @@ double n = text (show n)
 
 line :: Doc
 line = Line
+
+nest :: Int -> Doc -> Doc
+nest amount doc = Nest (max 0 amount) doc
 
 (<>) :: Doc -> Doc -> Doc
 Empty <> y = y
@@ -67,10 +72,11 @@ group :: Doc -> Doc
 group doc = Union (flatten doc) doc
 
 flatten :: Doc -> Doc
-flatten (Concat a b) = Concat (flatten a) (flatten b)
-flatten Line         = Char ' '
-flatten (Union a _)  = flatten a
-flatten other        = other
+flatten (Concat a b)      = Concat (flatten a) (flatten b)
+flatten Line              = Char ' '
+flatten (Union a _)       = flatten a
+flatten (Nest amount doc) = Nest amount (flatten doc)
+flatten other             = other
 
 punctuate :: Doc -> [Doc] -> [Doc]
 punctuate _ []     = []
@@ -78,31 +84,48 @@ punctuate _ [d]    = [d]
 punctuate p (d:ds) = (d <> p) : punctuate p ds
 
 compact :: Doc -> String
-compact doc = transform [doc]
+compact doc = transform [(0, doc)]
   where
     transform [] = ""
-    transform (d:ds) =
+    transform ((indent, d):ds) =
         case d of
-            Empty      -> transform ds
-            Char c     -> c : transform ds
-            Text s     -> s ++ transform ds
-            Line       -> '\n' : transform ds
-            Concat a b -> transform (a:b:ds)
-            Union _ b  -> transform (b:ds)
+            Empty ->
+                transform ds
+            Char c ->
+                c : transform ds
+            Text s ->
+                s ++ transform ds
+            Line ->
+                '\n' : (replicate indent ' ' ++ transform ds)
+            Concat a b ->
+                transform ((indent, a):(indent, b):ds)
+            Union _ b ->
+                transform ((indent, b):ds)
+            Nest amount nested ->
+                transform ((indent + amount, nested):ds)
 
 pretty :: Int -> Doc -> String
-pretty width doc = best 0 [doc]
+pretty width doc = best 0 [(0, doc)]
   where
     best _ [] = ""
-    best col (d:ds) =
+    best col ((indent, d):ds) =
         case d of
-            Empty      -> best col ds
-            Char c     -> c : best (col + 1) ds
-            Text s     -> s ++ best (col + length s) ds
-            Line       -> '\n' : best 0 ds
-            Concat a b -> best col (a:b:ds)
-            Union a b  ->
-                nicest col (best col (a:ds)) (best col (b:ds))
+            Empty ->
+                best col ds
+            Char c ->
+                c : best (col + 1) ds
+            Text s ->
+                s ++ best (col + length s) ds
+            Line ->
+                '\n' : (replicate indent ' ' ++ best indent ds)
+            Concat a b ->
+                best col ((indent, a):(indent, b):ds)
+            Union a b ->
+                nicest col
+                    (best col ((indent, a):ds))
+                    (best col ((indent, b):ds))
+            Nest amount nested ->
+                best col ((indent + amount, nested):ds)
 
     nicest col a b
         | fits (width - min width col) a = a
