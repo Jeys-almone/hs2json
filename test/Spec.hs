@@ -14,14 +14,25 @@ import Data.Char (isSpace)
 
 
 instance Arbitrary Doc where
-    arbitrary :: Gen Doc
-    arbitrary =
-        oneof [ return Empty
-              , liftM  Char   arbitrary
-              , liftM  Text   arbitrary
-              , return Line
-              , liftM2 Concat arbitrary arbitrary
-              , liftM2 Union  arbitrary arbitrary ]
+    arbitrary = sized docTree
+      where
+        -- Folhas (n = 0): apenas nós terminais
+        docTree 0 = frequency
+            [ (1, return Empty)
+            , (2, liftM Char arbitrary)
+            , (2, liftM Text arbitrary)
+            , (1, return Line)
+            ]
+        -- Nós internos: divide o tamanho n pela metade para evitar árvores gigantes
+        docTree n = frequency
+            [ (1, return Empty)
+            , (2, liftM Char arbitrary)
+            , (2, liftM Text arbitrary)
+            , (1, return Line)
+            , (3, liftM2 Concat (docTree (n `div` 2)) (docTree (n `div` 2)))
+            , (2, liftM2 Union  (docTree (n `div` 2)) (docTree (n `div` 2)))
+            ]
+
     shrink :: Doc -> [Doc]
     shrink = genericShrink
 
