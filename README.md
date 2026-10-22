@@ -11,7 +11,7 @@ Projeto desenvolvido em dupla para a Avaliação da Unidade 2, no curso de Engen
 
 ## Vídeo de apresentação
 
-**Link: a adicionar após a gravação.**
+**Link: https://youtu.be/NN0Sgo8tcnk**
 
 ## Sobre a biblioteca
 
