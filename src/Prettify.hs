@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Prettify
     ( Doc(..)
     , empty
@@ -17,6 +19,7 @@ module Prettify
     , pretty
     ) where
 
+import GHC.Generics (Generic)
 import Prelude hiding ((<>))
 
 infixr 6 <>
@@ -30,7 +33,7 @@ data Doc
     | Concat Doc Doc
     | Union Doc Doc
     | Nest Int Doc
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 empty :: Doc
 empty = Empty

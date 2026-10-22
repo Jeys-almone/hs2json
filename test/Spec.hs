@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Main (main) where
 
@@ -21,8 +22,10 @@ instance Arbitrary Doc where
               , return Line
               , liftM2 Concat arbitrary arbitrary
               , liftM2 Union  arbitrary arbitrary ]
+    shrink :: Doc -> [Doc]
+    shrink = genericShrink
 
-
+prop_empty_id :: Doc -> Bool
 prop_empty_id x =
     empty <> x == x &&
     x <> empty == x
